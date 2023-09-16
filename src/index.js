@@ -13,6 +13,11 @@ Käyttö:
     /historia HENKILÖ
 `
 
+// helper to equal 2 strings ignoring case
+function eqIgnoreCase(left, right) {
+    return left.toLowerCase() === right.toLowerCase()
+}
+
 export default {
     async fetch(req, env, ctx) {
         async function recordTort(env, tortName, criminalName) {
@@ -76,8 +81,10 @@ export default {
                     await respondInChat(UUSI_SAKKO_USAGE)
                     return
                 }
+                // permit € symbol in penalty
                 penalty = Number(penalty.replace('€', ''))
-                command = command.replace('/', '')
+                // permit leading '/' in command and ignore case
+                command = command.replace('/', '').toLowerCase()
 
                 if (isNaN(penalty)) {
                     await respondInChat(`"${penalty}" ei ole numero...`)
@@ -100,13 +107,15 @@ export default {
                 }
 
                 try {
-                    const sakko = await env.TORT.get(command)
+                    // permit with the leading slash or not, and ignore case
+                    const commandName = command.replace('/', '').toLowerCase()
+                    const sakko = await env.TORT.get(commandName)
                     if (!sakko) {
                         await respondInChat('Eioo tommosta')
                         return
                     }
 
-                    await env.TORT.delete(command)
+                    await env.TORT.delete(commandName)
                     await respondInChat('OK')
                     return
                 } catch (error) {
@@ -238,7 +247,8 @@ export default {
                     }
                 }
 
-                const command = message.text.slice(commands[0].offset, commands[0].offset + commands[0].length)
+                // commands are case-insensitive
+                const command = message.text.toLowerCase().slice(commands[0].offset, commands[0].offset + commands[0].length)
                 const args = message.text.slice(commands[0].length + 1).trim()
 
                 return {
@@ -257,6 +267,13 @@ export default {
         async function respondInChat(message) {
             await fetch(`${env.BOT_URL}/sendMessage?chat_id=${env.CHAT_ID}&text=${message}`)
         }
+
+        // async function getPerson(name) {
+        //     await
+        // }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// main starts here
 
         // only allow post requests
         if (req.method !== 'POST') {
