@@ -152,10 +152,10 @@ export default {
                         } else {
                             dateFormatted = 'pvm puuttuu'
                         }
-                        return `${dateFormatted} - ${description} ${penalty}€`
+                        return `- ${dateFormatted} ${description} ${penalty}€`
                     })
 
-                    await respondInChat(`${name} sakkohistoria:\n\n` + tortLog.join('\n') + `\n\nYhteensä: ${person.sum}€`)
+                    await respondInChat(`${name.toUpperCase()} SAKKOHISTORIA:\n` + tortLog.join('\n') + `\n\nYhteensä: ${person.sum}€`)
                     return
                 } catch (error) {
                     await respondInChat(`Vittu se mihkal ei osaa koodaa: ${error}`)
@@ -229,7 +229,7 @@ export default {
                     }
                     
                     const persons = await Promise.all(keys.map(async ({ name }) => await getPerson(name)))
-                    await respondInChat(`Kaikkien sakot:\n\n` + persons.map(({ name, sum }) => `${name}: ${sum}€`).join('\n'))
+                    await respondInChat(`KAIKKIEN SAKOT:\n` + persons.map(({ name, sum }) => ` - ${name}: ${sum}€`).join('\n'))
                     return
                 }
 
@@ -249,10 +249,10 @@ export default {
                 }, {})
 
                 const overviewLines = Object.entries(tortOverview).map(
-                    ([description, { timesCommitted, penalties }]) => `${description} x${timesCommitted} = ${penalties}€`
+                    ([description, { timesCommitted, penalties }]) => ` - ${description} x${timesCommitted} = ${penalties}€`
                 )
 
-                await respondInChat(`${name} sakot:\n\n` + overviewLines.join('\n') + `\n\nYhteensä: ${person.sum}€`)
+                await respondInChat(`${name.toUpperCase()} SAKOT:\n` + overviewLines.join('\n') + `\n\nYhteensä: ${person.sum}€`)
                 return
             },
         }
