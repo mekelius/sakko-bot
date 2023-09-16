@@ -13,6 +13,11 @@ Käyttö:
     /historia HENKILÖ
 `
 
+const POISTA_SAKKO_USAGE = `
+Käyttö:
+    /poista_sakko KOMENTO
+`
+
 const RECORD_TORT_USAGE = (tortName) => `
 Käyttö:
     /${tortName} HENKILÖ
@@ -52,7 +57,7 @@ export default {
                 person.sum = Number(person.sum) + Number(tort.penalty)
 
                 // push the data
-                env.PERSON.put(personName, JSON.stringify(person))
+                env.PERSON.put(personName.toLowerCase(), JSON.stringify(person))
                 await respondInChat(huoh[Math.floor(Math.random() * huoh.length)])
             } catch (error) {
                 await respondInChat(`Error: ${error}\nOpettelis vittu koodaan`)
@@ -117,7 +122,7 @@ export default {
             '/poista_sakko': async (env, args) => {
                 const command = args
                 if (!command) {
-                    await respondInChat(usage)
+                    await respondInChat(POISTA_SAKKO_USAGE)
                     return
                 }
 
@@ -150,6 +155,11 @@ export default {
 
                     const person = await env.PERSON.get(name, { type: 'json' })
 
+                    if (!person) {
+                        await respondInChat(`${name} ei ole saanut vielä sakkoja`)
+                        return
+                    }
+
                     // format them nicely
                     const tortLog = person.torts.map(({ date, description, penalty }) => {
                         let dateFormatted
@@ -181,7 +191,7 @@ export default {
                     return
                 }
 
-                const persons = await Promise.all(keys.map(async ({ name }) => await getPerson()))
+                const persons = await Promise.all(keys.map(async ({ name }) => await getPerson(name)))
 
                 // find the winner
                 const goblin = persons.reduce(
@@ -231,21 +241,31 @@ export default {
             '/sakot': async (env, args) => {
                 // print everyone's sums
                 if (!args) {
-                    const { keys } = await env.PERSON.list()
+                    const personList = await env.PERSON.list()
+                    if (!personList) {
+                        await respondInChat(`hähtäh`)
+                        return
+                    }
+                    const { keys } = personList
 
                     if (keys.length === 0) {
                         await respondInChat(`Sakkoja ei ole vielä annettu`)
                         return
                     }
-                    
+
                     const persons = await Promise.all(keys.map(async ({ name }) => await getPerson(name)))
                     await respondInChat(`KAIKKIEN SAKOT:\n` + persons.map(({ name, sum }) => ` - ${name}: ${sum}€`).join('\n'))
                     return
                 }
 
                 // Parse an overview of a persons committed torts
-                const name = args
+                const name = args.toLowerCase()
                 const person = await env.PERSON.get(name, { type: 'json' })
+
+                if (!person) {
+                    await respondInChat(`Kyseiselle henkilölle ei ole tullut sakkoja`)
+                    return
+                }
 
                 // count how many each tort has been committed
                 const tortOverview = person.torts.reduce((acc, { description, penalty }) => {
@@ -331,28 +351,32 @@ export default {
 
         const body = await req.json()
 
-        if ('message' in body) {
-            const message = body.message
-            const command = parseCommand(message)
+        try {
+            if ('message' in body) {
+                const message = body.message
+                const command = parseCommand(message)
 
-            if (!command.valid) {
-                return new Response('oh well')
-            } else {
-                if (command.command in commandHandlers) {
-                    await commandHandlers[command.command](env, command.args)
-                    return new Response()
-                }
-
-                // Check if command is a tort-command
-                const torts = await env.TORT.list()
-                const tortCommands = torts.keys.map(({ name }) => '/' + name)
-
-                if (tortCommands.includes(command.command)) {
-                    await recordTort(env, command.command.slice(1), command.args)
+                if (!command.valid) {
+                    return new Response('oh well')
                 } else {
-                    await respondInChat(`"${command.command}" ei ole komento`)
+                    if (command.command in commandHandlers) {
+                        await commandHandlers[command.command](env, command.args)
+                        return new Response()
+                    }
+
+                    // Check if command is a tort-command
+                    const torts = await env.TORT.list()
+                    const tortCommands = torts.keys.map(({ name }) => '/' + name)
+
+                    if (tortCommands.includes(command.command)) {
+                        await recordTort(env, command.command.slice(1), command.args)
+                    } else {
+                        await respondInChat(`"${command.command}" ei ole komento`)
+                    }
                 }
             }
+        } catch (error) {
+            await respondInChat(`ERROR: ${error}`)
         }
 
         // const data = await env.MY_BUCKET.get('jotain')
