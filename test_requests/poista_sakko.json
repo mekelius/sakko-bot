@@ -1,0 +1,12 @@
+{
+    "message": {
+        "text": "/poista_sakko",
+        "entities": [
+            {
+                "type": "bot_command",
+                "offset": 0,
+                "length": 13
+            }
+        ]
+    }
+}

@@ -1,0 +1,12 @@
+{
+    "message": {
+        "text": "/historia mihkal",
+        "entities": [
+            {
+                "type": "bot_command",
+                "offset": 0,
+                "length": 9
+            }
+        ]
+    }
+}

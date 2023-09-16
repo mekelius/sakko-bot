@@ -1,0 +1,12 @@
+{
+    "message": {
+        "text": "/uusi_sakko test;23;/qwer",
+        "entities": [
+            {
+                "type": "bot_command",
+                "offset": 0,
+                "length": 11
+            }
+        ]
+    }
+}
