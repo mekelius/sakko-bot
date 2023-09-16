@@ -13,6 +13,11 @@ Käyttö:
     /historia HENKILÖ
 `
 
+const RECORD_TORT_USAGE = (tortName) => `
+Käyttö:
+    /${tortName} HENKILÖ
+`
+
 // helper to equal 2 strings ignoring case
 function eqIgnoreCase(left, right) {
     return left.toLowerCase() === right.toLowerCase()
@@ -22,6 +27,11 @@ export default {
     async fetch(req, env, ctx) {
         async function recordTort(env, tortName, personName) {
             try {
+                if (!personName || !tortName) {
+                    await respondInChat(RECORD_TORT_USAGE(tortName))
+                    return
+                }
+
                 const tort = await env.TORT.get(tortName, { type: 'json' })
                 if (!tort) {
                     await respondInChat(`Nyt meni jotain pieleen. Sakkoa: "${tortName}" ei ole olemassa? Syyttäkää Mihkalia.`)
@@ -283,7 +293,9 @@ export default {
             }
 
             // commands are case-insensitive
-            const command = message.text.toLowerCase().slice(commands[0].offset, commands[0].offset + commands[0].length)
+            let command = message.text.toLowerCase().slice(commands[0].offset, commands[0].offset + commands[0].length)
+            // deal with mentions
+            command = command.split('@')[0]
             // commands can have args
             const args = message.text.slice(commands[0].length + 1).trim()
 
