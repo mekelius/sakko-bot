@@ -1,0 +1,5 @@
+#!/bin/bash
+
+command=$(perl -pe "s/\ .*//" <<< $1)
+payload="{\"message\": {\"text\": \"$1\", \"entities\": [{\"type\": \"bot_command\", \"offset\":0, \"length\":${#command}}]}}"
+curl http://localhost:8787 -H 'Content-type: application/json' -d "$payload"

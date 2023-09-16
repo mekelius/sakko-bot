@@ -20,7 +20,7 @@ function eqIgnoreCase(left, right) {
 
 export default {
     async fetch(req, env, ctx) {
-        async function recordTort(env, tortName, criminalName) {
+        async function recordTort(env, tortName, personName) {
             try {
                 const tort = await env.TORT.get(tortName, { type: 'json' })
                 if (!tort) {
@@ -28,17 +28,21 @@ export default {
                     return
                 }
                 // fetch the data for the criminal
-                let criminalData = await env.PERSON.get(criminalName, { type: 'json' })
-                if (!criminalData) {
-                    criminalData = { name: criminalName, torts: [], sum: 0 }
+                let person = await env.PERSON.get(personName, { type: 'json' })
+                if (!person) {
+                    person = { name: personName, torts: [], sum: 0 }
                 }
 
                 //update the criminal data
-                criminalData.torts.push({ penalty: tort.penalty, description: tort.description, date: new Date().toUTCString() })
-                criminalData.sum = Number(criminalData.sum) + Number(tort.penalty)
+                person.torts.push({
+                    penalty: tort.penalty,
+                    description: tort.description,
+                    date: new Date().toUTCString(),
+                })
+                person.sum = Number(person.sum) + Number(tort.penalty)
 
                 // push the data
-                env.PERSON.put(criminalName, JSON.stringify(criminalData))
+                env.PERSON.put(personName, JSON.stringify(person))
                 await respondInChat(huoh[Math.floor(Math.random() * huoh.length)])
             } catch (error) {
                 await respondInChat(`Error: ${error}\nOpettelis vittu koodaan`)
@@ -85,6 +89,7 @@ export default {
                 penalty = Number(penalty.replace('€', ''))
                 // permit leading '/' in command and ignore case
                 command = command.replace('/', '').toLowerCase()
+                console.log(command)
 
                 if (isNaN(penalty)) {
                     await respondInChat(`"${penalty}" ei ole numero...`)
@@ -160,7 +165,13 @@ export default {
             // Finds the person whos accrued most penalties
             '/goblin': async (env, args) => {
                 const { keys } = await env.PERSON.list()
-                const persons = await Promise.all(keys.map(async ({ name }) => await env.PERSON.get(name, { type: 'json' })))
+
+                if (keys.length === 0) {
+                    await respondInChat(`Sakkoja ei ole vielä annettu`)
+                    return
+                }
+
+                const persons = await Promise.all(keys.map(async ({ name }) => await getPerson()))
 
                 // find the winner
                 const goblin = persons.reduce(
@@ -181,7 +192,13 @@ export default {
             // Finds the person who has committed most torts
             '/ahkerin': async (env, args) => {
                 const { keys } = await env.PERSON.list()
-                const persons = await Promise.all(keys.map(async ({ name }) => await env.PERSON.get(name, { type: 'json' })))
+
+                if (keys.length === 0) {
+                    await respondInChat(`Sakkoja ei ole vielä annettu`)
+                    return
+                }
+
+                const persons = await Promise.all(keys.map(async ({ name }) => await getPerson(name)))
 
                 // find the winner
                 const goblin = persons.reduce(
@@ -205,7 +222,13 @@ export default {
                 // print everyone's sums
                 if (!args) {
                     const { keys } = await env.PERSON.list()
-                    const persons = await Promise.all(keys.map(async ({ name }) => await env.PERSON.get(name, { type: 'json' })))
+
+                    if (keys.length === 0) {
+                        await respondInChat(`Sakkoja ei ole vielä annettu`)
+                        return
+                    }
+                    
+                    const persons = await Promise.all(keys.map(async ({ name }) => await getPerson(name)))
                     await respondInChat(`Kaikkien sakot:\n\n` + persons.map(({ name, sum }) => `${name}: ${sum}€`).join('\n'))
                     return
                 }
@@ -236,31 +259,38 @@ export default {
 
         // parses bot command from a message
         function parseCommand(message) {
-            if ('entities' in message) {
-                const commands = message.entities.filter(({ type }) => type === 'bot_command')
-
-                // only allow one command per message, and message must begin with command
-                if (message.text[0] !== '/' || commands[0].offset !== 0) {
-                    return {
-                        valid: false,
-                        reason: 'bad command',
-                    }
-                }
-
-                // commands are case-insensitive
-                const command = message.text.toLowerCase().slice(commands[0].offset, commands[0].offset + commands[0].length)
-                const args = message.text.slice(commands[0].length + 1).trim()
-
-                return {
-                    valid: true,
-                    command,
-                    args,
-                }
-            } else {
+            if (!('entities' in message)) {
                 return {
                     valid: false,
                     reason: 'no command',
                 }
+            }
+            const commands = message.entities.filter(({ type }) => type === 'bot_command')
+
+            if (commands.length === 0) {
+                return {
+                    valid: false,
+                    reason: 'no command',
+                }
+            }
+
+            // message must begin with a slash
+            if (message.text[0] !== '/' || commands[0].offset !== 0) {
+                return {
+                    valid: false,
+                    reason: 'bad command',
+                }
+            }
+
+            // commands are case-insensitive
+            const command = message.text.toLowerCase().slice(commands[0].offset, commands[0].offset + commands[0].length)
+            // commands can have args
+            const args = message.text.slice(commands[0].length + 1).trim()
+
+            return {
+                valid: true,
+                command,
+                args,
             }
         }
 
@@ -268,12 +298,18 @@ export default {
             await fetch(`${env.BOT_URL}/sendMessage?chat_id=${env.CHAT_ID}&text=${message}`)
         }
 
-        // async function getPerson(name) {
-        //     await
-        // }
+        async function getPerson(name) {
+            // names are stored in lowercase. Case-preserving displayname is in the object
+            const person = await env.PERSON.get(name.toLowerCase(), { type: 'json' })
+            return person
+        }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// main starts here
+        function newPerson() {
+            return {}
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // main starts here
 
         // only allow post requests
         if (req.method !== 'POST') {
