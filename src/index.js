@@ -254,7 +254,8 @@ export default {
                     }
 
                     const persons = await Promise.all(keys.map(async ({ name }) => await getPerson(name)))
-                    await respondInChat(`KAIKKIEN SAKOT:\n` + persons.map(({ name, sum }) => ` - ${name}: ${sum}€`).join('\n'))
+                    const total = persons.reduce((acc ,{sum}) => acc+sum, 0)
+                    await respondInChat(`KAIKKIEN SAKOT:\n` + persons.map(({ name, sum }) => ` - ${name}: ${sum}€`).join('\n') + `\n\nKassa yhteensä: ${total}€`)
                     return
                 }
 
