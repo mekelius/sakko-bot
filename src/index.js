@@ -24,12 +24,12 @@ Käyttö:
 `
 
 // helper to equal 2 strings ignoring case
-function eqIgnoreCase(left, right) {
-    return left.toLowerCase() === right.toLowerCase()
-}
+// function eqIgnoreCase(left, right) {
+//     return left.toLowerCase() === right.toLowerCase()
+// }
 
 export default {
-    async fetch(req, env, ctx) {
+    async fetch(req, env) {
         async function recordTort(env, tortName, personName) {
             try {
                 if (!personName || !tortName) {
@@ -43,7 +43,7 @@ export default {
                     return
                 }
                 // fetch the data for the criminal
-                let person = await env.PERSON.get(personName, { type: 'json' })
+                let person = await getPerson(personName)
                 if (!person) {
                     person = { name: personName, torts: [], sum: 0 }
                 }
@@ -67,7 +67,7 @@ export default {
 
         // hard coded handlers. Every new tort gets an additional command added
         const commandHandlers = {
-            '/sakkolista': async (env, args) => {
+            '/sakkolista': async (env) => {
                 // fetch the object metadata
                 const { keys } = await env.TORT.list()
 
@@ -145,7 +145,7 @@ export default {
 
             // Prints person's tort history in full
             '/historia': async (env, args) => {
-                try {
+                try { 
                     const name = args
 
                     if (!name) {
@@ -153,7 +153,7 @@ export default {
                         return
                     }
 
-                    const person = await env.PERSON.get(name, { type: 'json' })
+                    const person = await getPerson(args)
 
                     if (!person) {
                         await respondInChat(`${name} ei ole saanut vielä sakkoja`)
@@ -183,7 +183,7 @@ export default {
             },
 
             // Finds the person whos accrued most penalties
-            '/goblin': async (env, args) => {
+            '/goblin': async (env) => {
                 const { keys } = await env.PERSON.list()
 
                 if (keys.length === 0) {
@@ -210,7 +210,7 @@ export default {
             },
 
             // Finds the person who has committed most torts
-            '/ahkerin': async (env, args) => {
+            '/ahkerin': async (env) => {
                 const { keys } = await env.PERSON.list()
 
                 if (keys.length === 0) {
@@ -259,8 +259,7 @@ export default {
                 }
 
                 // Parse an overview of a persons committed torts
-                const name = args.toLowerCase()
-                const person = await env.PERSON.get(name, { type: 'json' })
+                const person = await getPerson(args)
 
                 if (!person) {
                     await respondInChat(`Kyseiselle henkilölle ei ole tullut sakkoja`)
@@ -336,9 +335,11 @@ export default {
             return person
         }
 
-        function newPerson() {
-            return {}
-        }
+        // async function putPerson(name, displayName, torts, sum) {}
+
+        // function newPerson() {
+        //     return {}
+        // }
 
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // main starts here
