@@ -20,7 +20,7 @@ Käyttö:
 
 const RECORD_TORT_USAGE = (tortName) => `
 Käyttö:
-    /${tortName} HENKILÖ
+    /${tortName} HENKILÖ [xN]
 `
 
 // helper to equal 2 strings ignoring case
@@ -30,9 +30,21 @@ Käyttö:
 
 export default {
     async fetch(req, env) {
-        async function recordTort(env, tortName, personName) {
+        async function recordTort(env, tortName, args) {
             try {
-                if (!personName || !tortName) {
+                const argsFromStr = args.split(' ')
+                if (argsFromStr.length > 2) {
+                    await respondInChat(RECORD_TORT_USAGE(tortName))
+                    return
+                }
+
+                const personName = argsFromStr[0]
+
+                // permit 'xN' or 'N' as second parameter
+                const times = argsFromStr[1] ? argsFromStr[1].replace('x', '') : 1
+
+
+                if (!personName || !tortName || isNaN(times)) {
                     await respondInChat(RECORD_TORT_USAGE(tortName))
                     return
                 }
@@ -42,19 +54,23 @@ export default {
                     await respondInChat(`Nyt meni jotain pieleen. Sakkoa: "${tortName}" ei ole olemassa? Syyttäkää Mihkalia.`)
                     return
                 }
+
                 // fetch the data for the criminal
                 let person = await getPerson(personName)
                 if (!person) {
                     person = { name: personName, torts: [], sum: 0 }
                 }
 
-                //update the criminal data
-                person.torts.push({
-                    penalty: tort.penalty,
-                    description: tort.description,
-                    date: new Date().toUTCString(),
+                
+                Array(times).forEach(()=>{
+                    //update the criminal data
+                    person.torts.push({
+                        penalty: tort.penalty,
+                        description: tort.description,
+                        date: new Date().toUTCString(),
+                    })
                 })
-                person.sum = Number(person.sum) + Number(tort.penalty)
+                person.sum = Number(person.sum) + Number(tort.penalty) * times
 
                 // push the data
                 env.PERSON.put(personName.toLowerCase(), JSON.stringify(person))
@@ -282,7 +298,7 @@ export default {
                     ([description, { timesCommitted, penalties }]) => ` - ${description} x${timesCommitted} = ${penalties}€`
                 )
 
-                await respondInChat(`${name.toUpperCase()} SAKOT:\n` + overviewLines.join('\n') + `\n\nYhteensä: ${person.sum}€`)
+                await respondInChat(`${person.name.toUpperCase()} SAKOT:\n` + overviewLines.join('\n') + `\n\nYhteensä: ${person.sum}€`)
                 return
             },
         }
