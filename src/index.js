@@ -41,7 +41,7 @@ export default {
                 const personName = argsFromStr[0]
 
                 // permit 'xN' or 'N' as second parameter
-                const times = argsFromStr[1] ? argsFromStr[1].replace('x', '') : 1
+                const times = argsFromStr[1] ? Number(argsFromStr[1].replace('x', '')) : 1
 
 
                 if (!personName || !tortName || isNaN(times)) {
@@ -61,15 +61,15 @@ export default {
                     person = { name: personName, torts: [], sum: 0 }
                 }
 
-                
-                Array(times).forEach(()=>{
+                // ugly, js plz
+                for (const _ of Array(times)) {
                     //update the criminal data
                     person.torts.push({
                         penalty: tort.penalty,
                         description: tort.description,
                         date: new Date().toUTCString(),
                     })
-                })
+                }
                 person.sum = Number(person.sum) + Number(tort.penalty) * times
 
                 // push the data
