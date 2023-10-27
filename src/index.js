@@ -62,7 +62,7 @@ export default {
                 }
 
                 // ugly, js plz
-                for (const _ = 0; _++; _ < times) {
+                for (const _ of Array(times)) {
                     //update the criminal data
                     person.torts.push({
                         penalty: tort.penalty,
